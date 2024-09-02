@@ -16,6 +16,8 @@ from alibabacloud_tea_util import models as util_models
 from alibabacloud_tea_console.client import Client as ConsoleClient
 from alibabacloud_tea_util.client import Client as UtilClient
 
+from metrics import ECS_SERVER
+
 access_key=''
 secret_key=''
 region_id='ap-southeast-1'
@@ -26,7 +28,7 @@ def export_csv(lst_instances, metric_collection):
         for instance in lst_instances:
             data = []
             for metric in metric_collection:
-                data.append(Monitoring.main(sys.argv[1:], present, past, instance, metric["metricName"], metric["namespace"]))
+                data.append(Monitoring.main(sys.argv[1:], present, past, instance, metric.metricName, metric.namespace))
             resource_file.write(f"{instance},{data[0][0]},{data[0][1]},{data[1][0]},{data[1][1]},{data[2][0]},{data[2][1]},{data[3][0]},{data[3][1]}\n")
 
 def convert_str_dict(data):
@@ -147,12 +149,7 @@ class Monitoring:
 if __name__ == '__main__':
     present = datetime.now(tz=timezone.utc).replace(microsecond=0)
     past = present.replace(day=1) - timedelta(1)
-    metric_collection = [
-        {"metricName": "CPUUtilization", "namespace": "acs_ecs_dashboard"},
-        {"metricName": "memory_usedutilization", "namespace": "acs_ecs_dashboard"},
-        {"metricName": "DiskReadIOPS", "namespace": "acs_ecs_dashboard"},
-        {"metricName": "DiskWriteIOPS", "namespace": "acs_ecs_dashboard"},
-    ]
+    metric_collection = ECS_SERVER
     lst_instances = ListInstances.main(sys.argv[1:])
 
     export_csv(lst_instances, metric_collection)
