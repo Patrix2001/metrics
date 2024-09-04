@@ -58,4 +58,3 @@ python ecs.py
 Upon completion, a file named `ecs.csv` will be generated in the current directory containing detailed monitoring information for each instance.
 
 Please note that when deploying in practice, security issues should be considered to avoid storing sensitive information like Access Key ID and Secret Key in plain text. It's recommended to handle authentication information in a more secure manner. For Example, you can set policy to limit, `ReadOnlyAccess` to the Access Key ID and Secret Key.
-```
