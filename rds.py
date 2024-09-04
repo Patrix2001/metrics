@@ -17,9 +17,10 @@ from alibabacloud_tea_util.client import Client as UtilClient
 
 from metrics import RDS_MYSQL, RDS_PosgreSQL, RDS_SQLServer
 from regions import REGIONS_OUT_CHINA
+from cred import ACCESS_KEY, SECRET_KEY
 
-access_key=''
-secret_key=''
+access_key = ACCESS_KEY
+secret_key = SECRET_KEY
 
 def convert_str_dict(data):
     return json.loads(data)

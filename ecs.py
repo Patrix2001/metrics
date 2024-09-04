@@ -18,9 +18,10 @@ from alibabacloud_tea_util.client import Client as UtilClient
 
 from metrics import ECS_SERVER
 from regions import REGIONS_OUT_CHINA
+from cred import ACCESS_KEY, SECRET_KEY
 
-access_key=''
-secret_key=''
+access_key = ACCESS_KEY
+secret_key = SECRET_KEY
 
 def export_csv(lst_instances, metric_collection):
     with open("ecs.csv", "w") as resource_file:
@@ -141,7 +142,6 @@ class Monitoring:
         runtime = util_models.RuntimeOptions()
         try:
             resp = client.describe_metric_list_with_options(describe_metric_list_request, runtime)
-            print(resp.body)
             if len(convert_str_dict(resp.body.datapoints)) == 0:
                 return ['', '']
             lst_average = [monitor['Average'] for monitor in convert_str_dict(resp.body.datapoints)]
