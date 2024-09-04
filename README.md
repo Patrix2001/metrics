@@ -14,7 +14,7 @@ Some of the metrics collected include:
 
 ## Introduction
 
-This tool collects the basic information and monitoring metrics (such as CPU utilization, memory utilization, etc.) of all ECS instances in a specified region by calling Alibaba Cloud API, and outputs the data into a file named `<service>.csv` after organizing it.
+This tool collects the basic information and monitoring metrics (such as CPU utilization, memory utilization, etc.) of all instances in a specified region by calling Alibaba Cloud API, and outputs the data into a file named `<service>.csv` after organizing it.
 
 ## Installation
 
