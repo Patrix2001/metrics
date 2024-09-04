@@ -10,8 +10,7 @@ Scope of service:
 Some of the metrics collected include: 
 * CPU utilization, 
 * memory utilization,
-* disk I/O utilization, and 
-* network I/O utilization.
+* disk I/O utilization
 
 ## Introduction
 
