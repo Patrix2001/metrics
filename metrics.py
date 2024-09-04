@@ -34,8 +34,20 @@ RDS_SQLServer = [Metrics("SQLServer_CpuUsage", "acs_rds_dashboard"),
              Metrics("SQLServer_DiskUsage", "acs_rds_dashboard")
             ]
 
+REDIS_CLUSTER = [Metrics("ShardingCpuUsage", "acs_kvstore"), 
+             Metrics("ShardingMemoryUsage", "acs_kvstore"), 
+             Metrics("ShardingConnectionUsage", "acs_kvstore"), 
+             Metrics("ShardingUsedQPS", "acs_kvstore")
+        ]
+
 REDIS_STANDARD = [Metrics("StandardCpuUsage", "acs_kvstore"), 
              Metrics("StandardMemoryUsage", "acs_kvstore"), 
              Metrics("StandardUsedConnection", "acs_kvstore"), 
              Metrics("StandardUsedQPS", "acs_kvstore")
+        ]
+
+REDIS_RW = [Metrics("SplitrwCpuUsage", "acs_kvstore"), 
+             Metrics("SplitrwMemoryUsage", "acs_kvstore"), 
+             Metrics("SplitrwUsedConnection", "acs_kvstore"), 
+             Metrics("SplitrwUsedQPS", "acs_kvstore")
         ]
