@@ -16,10 +16,10 @@ from alibabacloud_tea_console.client import Client as ConsoleClient
 from alibabacloud_tea_util.client import Client as UtilClient
 
 from metrics import RDS_MYSQL, RDS_PosgreSQL, RDS_SQLServer
+from regions import REGIONS_OUT_CHINA
 
 access_key=''
 secret_key=''
-region_id='ap-southeast-1'
 
 def convert_str_dict(data):
     return json.loads(data)
@@ -38,7 +38,7 @@ class ListInstances:
         pass
 
     @staticmethod
-    def create_client() -> Rds20140815Client:
+    def create_client(region_id) -> Rds20140815Client:
         """
         Initialize the Client with the AccessKey of the account
         @return: Client
@@ -59,8 +59,9 @@ class ListInstances:
     @staticmethod
     def main(
         args: List[str],
+        region_id
     ) -> None:
-        client = ListInstances.create_client()
+        client = ListInstances.create_client(region_id)
         describe_dbinstances_request = rds_20140815_models.DescribeDBInstancesRequest(
             region_id=region_id
         )
@@ -85,7 +86,7 @@ class Monitoring:
         pass
 
     @staticmethod
-    def create_client() -> Cms20190101Client:
+    def create_client(region_id) -> Cms20190101Client:
         """
         Initialize the Client with the AccessKey of the account
         @return: Client
@@ -106,20 +107,22 @@ class Monitoring:
     @staticmethod
     def main(
         args: List[str],
+        region_id,
         present,
         past,
         instanceid,
         metric_name,
         namespace
     ) -> None:
-        client = Monitoring.create_client()
+        client = Monitoring.create_client(region_id)
         describe_metric_list_request = cms_20190101_models.DescribeMetricListRequest(
             namespace=namespace,
             metric_name=metric_name,
             dimensions=f'[{{"instanceId":"{instanceid}"}}]',
             start_time= past.strftime("%Y-%m-%d %H:%M:%SZ"),
             end_time= present.strftime("%Y-%m-%d %H:%M:%SZ"),
-            period='2592000'
+            period='2592000',
+            region_id=region_id
         )
         runtime = util_models.RuntimeOptions()
         try:
@@ -139,20 +142,32 @@ class Monitoring:
 if __name__ == '__main__':
     present = datetime.now(tz=timezone.utc).replace(microsecond=0)
     past = present.replace(day=1) - timedelta(1)
-    lst_instances, lst_engines = ListInstances.main(sys.argv[1:])
     
-    
+    lst_instances = []
+    lst_engines = []
+    for region_id in REGIONS_OUT_CHINA:
+        data = ListInstances.main(sys.argv[1:], region_id)
+        lst_instances.append(data[0])
+        lst_engines.append(data[1])
+
+
     with open("rds.csv", "w") as resource_file:
-        resource_file.write("instanceId,Engine,CPU Utilization (AVG),CPU Utilization (MAX),Memory Utilization(AVG),Memory Utilization(MAX),IOPS AVG,IOPS MAX,Disk AVG ,Disk MAX\n")
-        for i in range(len(lst_instances)):
-            data = []  
-            if lst_engines[i] == "PostgreSQL":
-                metric_collection = RDS_PosgreSQL
-            elif lst_engines[i] == "SQLServer":
-                metric_collection = RDS_SQLServer
+        resource_file.write("instanceId,Region,Engine,CPU Utilization (AVG),CPU Utilization (MAX),Memory Utilization(AVG),Memory Utilization(MAX),IOPS AVG,IOPS MAX,Disk AVG ,Disk MAX\n")
+        for region, instances, engines in zip(REGIONS_OUT_CHINA, lst_instances, lst_engines):
+
+            if instances and engines:
+                for index in range(len(instances)):
+                    data = []
+                    if engines[index] == "PostgreSQL":
+                        metric_collection = RDS_PosgreSQL
+                    elif engines[index] == "SQLServer":
+                        metric_collection = RDS_SQLServer
+                    else:
+                        metric_collection = RDS_MYSQL
+                    for metric in metric_collection:
+                        data.append(Monitoring.main(sys.argv[1:],region,present, past, instances[index], metric.metricName, metric.namespace))
+                    resource_file.write(f"{instances[index]},{region},{engines[index]},{data[0][0]},{data[0][1]},{data[1][0]},{data[1][1]},{data[2][0]},{data[2][1]},{data[3][0]},{data[3][1]}\n")
             else:
-                metric_collection = RDS_MYSQL
-            for metric in metric_collection:
-                data.append(Monitoring.main(sys.argv[1:], present, past, lst_instances[i], metric.metricName, metric.namespace))
-            resource_file.write(f"{lst_instances[i]},{lst_engines[i]},{data[0][0]},{data[0][1]},{data[1][0]},{data[1][1]},{data[2][0]},{data[2][1]},{data[3][0]},{data[3][1]}\n")
+                print(f"{region} No Deployed Instances")
+
             

@@ -17,19 +17,24 @@ from alibabacloud_tea_console.client import Client as ConsoleClient
 from alibabacloud_tea_util.client import Client as UtilClient
 
 from metrics import ECS_SERVER
+from regions import REGIONS_OUT_CHINA
 
 access_key=''
 secret_key=''
-region_id='ap-southeast-1'
 
 def export_csv(lst_instances, metric_collection):
     with open("ecs.csv", "w") as resource_file:
-        resource_file.write("instanceId,CPU Utilization (AVG),CPU Utilization (MAX),Memory Utilization(AVG),Memory Utilization(MAX),IOPS AVG (read Times/s),IOPS MAX (read Times/s),IOPS AVG (write Times/s),IOPS MAX (write Times/s)\n")
-        for instance in lst_instances:
-            data = []
-            for metric in metric_collection:
-                data.append(Monitoring.main(sys.argv[1:], present, past, instance, metric.metricName, metric.namespace))
-            resource_file.write(f"{instance},{data[0][0]},{data[0][1]},{data[1][0]},{data[1][1]},{data[2][0]},{data[2][1]},{data[3][0]},{data[3][1]}\n")
+        resource_file.write("instanceId,Region,CPU Utilization (AVG),CPU Utilization (MAX),Memory Utilization(AVG),Memory Utilization(MAX),IOPS AVG (read Times/s),IOPS MAX (read Times/s),IOPS AVG (write Times/s),IOPS MAX (write Times/s)\n")
+        for region, instances in zip(REGIONS_OUT_CHINA, lst_instances):
+            if instances:
+                for instance_id in instances:
+                    data = []      
+                    for metric in metric_collection:
+                        data.append(Monitoring.main(sys.argv[1:],region,present, past, instance_id, metric.metricName, metric.namespace))
+                    resource_file.write(f"{instance_id},{region},{data[0][0]},{data[0][1]},{data[1][0]},{data[1][1]},{data[2][0]},{data[2][1]},{data[3][0]},{data[3][1]}\n")
+            else:
+                print(f"{region} No Deployed Instances")
+                
 
 def convert_str_dict(data):
     return json.loads(data)
@@ -49,7 +54,7 @@ class ListInstances:
         pass
 
     @staticmethod
-    def create_client() -> Ecs20140526Client:
+    def create_client(region_id) -> Ecs20140526Client:
         """
         Initialize the Client with the AccessKey of the account
         @return: Client
@@ -69,9 +74,9 @@ class ListInstances:
 
     @staticmethod
     def main(
-        args: List[str],
+        args: List[str],region_id
     ) -> None:
-        client = ListInstances.create_client()
+        client = ListInstances.create_client(region_id)
         describe_instances_request = ecs_20140526_models.DescribeInstancesRequest(
             region_id=region_id
         )
@@ -95,7 +100,7 @@ class Monitoring:
         pass
 
     @staticmethod
-    def create_client() -> Cms20190101Client:
+    def create_client(region_id) -> Cms20190101Client:
         """
         Initialize the Client with the AccessKey of the account
         @return: Client
@@ -116,28 +121,32 @@ class Monitoring:
     @staticmethod
     def main(
         args: List[str],
+        region_id,
         present,
         past,
         instanceid,
         metric_name,
         namespace
     ) -> None:
-        client = Monitoring.create_client()
+        client = Monitoring.create_client(region_id)
         describe_metric_list_request = cms_20190101_models.DescribeMetricListRequest(
             namespace=namespace,
             metric_name=metric_name,
             dimensions=f'[{{"instanceId":"{instanceid}"}}]',
             start_time= past.strftime("%Y-%m-%d %H:%M:%SZ"),
             end_time= present.strftime("%Y-%m-%d %H:%M:%SZ"),
-            period='2592000'
+            period='2592000',
+            region_id=region_id
         )
         runtime = util_models.RuntimeOptions()
         try:
             resp = client.describe_metric_list_with_options(describe_metric_list_request, runtime)
-
+            print(resp.body)
+            if len(convert_str_dict(resp.body.datapoints)) == 0:
+                return ['', '']
             lst_average = [monitor['Average'] for monitor in convert_str_dict(resp.body.datapoints)]
-            lst_minimum = [monitor['Minimum'] for monitor in convert_str_dict(resp.body.datapoints)]
-            lst_maximum = [monitor['Maximum'] for monitor in convert_str_dict(resp.body.datapoints)]
+            lst_minimum = [monitor.get('Minimum', '') for monitor in convert_str_dict(resp.body.datapoints)]
+            lst_maximum = [monitor.get('Maximum', '') for monitor in convert_str_dict(resp.body.datapoints)]
             
             return [average(lst_average), maximum(lst_maximum)]
         except Exception as error:
@@ -150,6 +159,9 @@ if __name__ == '__main__':
     present = datetime.now(tz=timezone.utc).replace(microsecond=0)
     past = present.replace(day=1) - timedelta(1)
     metric_collection = ECS_SERVER
-    lst_instances = ListInstances.main(sys.argv[1:])
-
+    
+    lst_instances = []
+    for region_id in REGIONS_OUT_CHINA:
+        lst_instances.append(ListInstances.main(sys.argv[1:], region_id))
+        
     export_csv(lst_instances, metric_collection)
